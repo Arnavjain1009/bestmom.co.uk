@@ -45,9 +45,15 @@ function draw(){
         aboutbutton.hide();
     })
 
-    if(gameState == "level1"){
-        background(level1)
-    }
+    if (gameState == "level1") {
+            // Set background to the image
+            document.body.style.backgroundImage = "url('level1.jpg')";
+
+            // After 1 second, redirect to game.html
+            setTimeout(function() {
+                window.location.href = "game.html";
+            }, 1000); // 1000 milliseconds = 1 second
+        }
 
     if(gameState == "about"){
         aboutGame();

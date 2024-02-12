@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3D Maze Game</title>
+  <style>
+    body { margin: 0; padding: 0; overflow: hidden; }
+    canvas { display: block; }
+    .joystick-container {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+    }
+    .joystick {
+      width: 80px;
+      height: 80px;
+      background-color: rgba(255, 255, 255, 0.5);
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+    }
+    .joystick-thumb {
+      width: 40px;
+      height: 40px;
+      background-color: rgba(0, 0, 0, 0.5);
+      border-radius: 50%;
+    }
+    .refresh-button {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      background-color: #ffffff;
+      border: 1px solid #000000;
+      padding: 5px 10px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+
+    <button class="refresh-button" onclick="refreshPage()">Refresh</button>
+
+
+<div class="joystick-container">
+  <div class="joystick" id="joystick">
+    <div class="joystick-thumb" id="joystick-thumb"></div>
+  </div>
+</div>
+
+<script>
+     function refreshPage() {
+    window.location.reload();
+  }
+  // Set up Three.js renderer
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  document.body.appendChild(renderer.domElement);
+
+  // Set up camera
+  const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+  camera.position.set(0, 3, 2); // Adjusted camera position (closer to the player)
+
+  // Set up scene
+  const scene = new THREE.Scene();
+
+  // Create maze
+  const mazeSize = 10;
+  const mazeGeometry = new THREE.BoxGeometry(mazeSize, 2, mazeSize);
+  const mazeMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+  const maze = new THREE.Mesh(mazeGeometry, mazeMaterial);
+  scene.add(maze);
+
+  // Generate random walls within the maze
+  const wallCount = 20;
+  const wallGeometry = new THREE.BoxGeometry(2, 3, 0.125);
+  const wallMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+  const walls = []; // Array to store wall objects for collision detection
+  for (let i = 0; i < wallCount; i++) {
+    let x, z;
+    do {
+      x = Math.floor(Math.random() * mazeSize) - mazeSize / 2;
+      z = Math.floor(Math.random() * mazeSize) - mazeSize / 2;
+    } while ((x >= -0.5 && x <= 0.5) && (z >= 4.5 && z <= 5.5)); // Ensure player doesn't spawn inside the wall
+    const wall = new THREE.Mesh(wallGeometry, wallMaterial);
+    wall.position.set(x, 1, z);
+    scene.add(wall);
+    walls.push(wall); // Add wall to the array
+  }
+
+  // Set up blue wall for finishing point
+  const finishWallGeometry = new THREE.BoxGeometry(1, 2, 1);
+  const finishWallMaterial = new THREE.MeshBasicMaterial({ color: 0x0000ff }); // Blue color
+  const finishWall = new THREE.Mesh(finishWallGeometry, finishWallMaterial);
+  finishWall.position.set(0, 1, 5); // Adjust position as needed
+  scene.add(finishWall);
+// Create roof
+const roofGeometry = new THREE.PlaneGeometry(mazeSize + 2, mazeSize + 2);
+const roofMaterial = new THREE.MeshBasicMaterial({ color: 0x808080, side: THREE.DoubleSide }); // Gray color
+const roof = new THREE.Mesh(roofGeometry, roofMaterial);
+roof.rotation.x = Math.PI / 2; // Rotate the roof to be horizontal
+roof.position.set(0, 3, 0); // Position the roof above the maze geometry
+scene.add(roof);
+
+  // Set up player
+  const playerGeometry = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+  const playerMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+  const player = new THREE.Mesh(playerGeometry, playerMaterial);
+  player.position.set(0, 1, 0); // Adjusted player position above the green floor
+  scene.add(player);
+
+  // Handle user input for player movement
+  const joystick = document.getElementById('joystick');
+  const thumb = document.getElementById('joystick-thumb');
+  const joystickSize = 40;
+  const joystickPosition = { x: 0, y: 0 };
+
+  function checkCollisionWithWalls(position) {
+    for (const wall of walls) {
+      const distance = wall.position.distanceTo(position);
+      if (distance < 1) {
+        return true; // Collision detected
+      }
+    }
+    return false; // No collision
+  }
+
+  function checkCollisionWithFinishWall() {
+    const distance = finishWall.position.distanceTo(player.position);
+    return distance < 1.5; // Adjust as needed for collision detection
+  }
+
+  function updateJoystick(event) {
+    const rect = joystick.getBoundingClientRect();
+    joystickPosition.x = event.clientX - rect.left - joystickSize / 2;
+    joystickPosition.y = event.clientY - rect.top - joystickSize / 2;
+    const distance = Math.sqrt(joystickPosition.x ** 2 + joystickPosition.y ** 2);
+    if (distance > joystickSize / 2) {
+      const angle = Math.atan2(joystickPosition.y, joystickPosition.x);
+      joystickPosition.x = Math.cos(angle) * (joystickSize / 2);
+      joystickPosition.y = Math.sin(angle) * (joystickSize / 2);
+    }
+    thumb.style.transform = `translate(${joystickPosition.x}px, ${joystickPosition.y}px)`;
+  }
+
+  joystick.addEventListener('mousedown', () => {
+    thumb.style.width = `${joystickSize}px`;
+    thumb.style.height = `${joystickSize}px`;
+    window.addEventListener('mousemove', updateJoystick);
+  });
+
+  window.addEventListener('mouseup', () => {
+    thumb.style.width = '40px';
+    thumb.style.height = '40px';
+    thumb.style.transform = 'translate(0px, 0px)';
+    window.removeEventListener('mousemove', updateJoystick);
+    joystickPosition.x = 0;
+    joystickPosition.y = 0;
+  });
+
+  // Render loop
+  function animate() {
+    requestAnimationFrame(animate);
+    const newPosition = player.position.clone(); // Get the current position of the player
+    newPosition.x += joystickPosition.x * 0.002; // Slow down movement along the x-axis
+    newPosition.z += joystickPosition.y * 0.002; // Slow down movement along the z-axis
+    if (!checkCollisionWithWalls(newPosition)) {
+      player.position.copy(newPosition); // Move the player if there is no collision
+    }
+    camera.position.x = player.position.x; // Follow player with camera
+    camera.position.z = player.position.z + 1.5; // Adjusted camera position (closer to the player)
+    camera.lookAt(player.position); // Camera looks at player
+    renderer.render(scene, camera);
+
+    // Check collision with finish wall
+    if (checkCollisionWithFinishWall()) {
+      alert('Congratulations! You finished!');
+    }
+  }
+
+  animate();
+</script>
+
+</body>
+</html>
