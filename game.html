@@ -5,19 +5,30 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>3D Maze Game</title>
   <style>
-    body { margin: 0; padding: 0; overflow: hidden; }
-    canvas { display: block; }
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+    }
+
+    canvas {
+      display: block;
+    }
+
     .arrow-container {
       position: absolute;
       bottom: 20px;
-      left: 20px;
+      left: 50%;
+      transform: translateX(-50%);
       display: flex;
       justify-content: space-between;
-      width: 200px; /* Adjusted width to accommodate larger buttons */
+      width: 60vw; /* Adjusted width to fit better on mobile */
     }
+
     .arrow {
-      width: 60px; /* Increased button size */
-      height: 60px; /* Increased button size */
+      width: 15vw; /* Increased button size for touch input */
+      height: 15vw; /* Increased button size for touch input */
       background-color: rgba(255, 255, 255, 0.5);
       border-radius: 50%;
       display: flex;
@@ -25,30 +36,39 @@
       align-items: center;
       cursor: pointer;
     }
-    .arrow-up, .arrow-down {
-      width: 0;
-      height: 0;
-      border-left: 15px solid transparent;
-      border-right: 15px solid transparent;
-    }
-    .arrow-up {
-      border-bottom: 15px solid rgba(0, 0, 0, 0.5);
-    }
+
+    .arrow-up,
     .arrow-down {
-      border-top: 15px solid rgba(0, 0, 0, 0.5);
-    }
-    .arrow-left, .arrow-right {
       width: 0;
       height: 0;
-      border-top: 15px solid transparent;
-      border-bottom: 15px solid transparent;
+      border-left: 5vw solid transparent; /* Adjusted border size */
+      border-right: 5vw solid transparent; /* Adjusted border size */
     }
-    .arrow-left {
-      border-right: 15px solid rgba(0, 0, 0, 0.5);
+
+    .arrow-up {
+      border-bottom: 5vw solid rgba(0, 0, 0, 0.5);
     }
+
+    .arrow-down {
+      border-top: 5vw solid rgba(0, 0, 0, 0.5);
+    }
+
+    .arrow-left,
     .arrow-right {
-      border-left: 15px solid rgba(0, 0, 0, 0.5);
+      width: 0;
+      height: 0;
+      border-top: 5vw solid transparent; /* Adjusted border size */
+      border-bottom: 5vw solid transparent; /* Adjusted border size */
     }
+
+    .arrow-left {
+      border-right: 5vw solid rgba(0, 0, 0, 0.5);
+    }
+
+    .arrow-right {
+      border-left: 5vw solid rgba(0, 0, 0, 0.5);
+    }
+
     .refresh-button {
       position: absolute;
       top: 20px;
@@ -74,9 +94,11 @@
 </div>
 
 <script>
+  // Function to refresh the page
   function refreshPage() {
     window.location.reload();
   }
+
   // Set up Three.js renderer
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
@@ -119,6 +141,7 @@
   const finishWall = new THREE.Mesh(finishWallGeometry, finishWallMaterial);
   finishWall.position.set(0, 1, 5); // Adjust position as needed
   scene.add(finishWall);
+
   // Create roof
   const roofGeometry = new THREE.PlaneGeometry(mazeSize + 2, mazeSize + 2);
   const roofMaterial = new THREE.MeshBasicMaterial({ color: 0x808080, side: THREE.DoubleSide }); // Gray color
@@ -179,31 +202,32 @@
     clearInterval(moveInterval);
   }
 
-  arrowUp.addEventListener('mousedown', () => {
+  // Touch events for mobile
+  arrowUp.addEventListener('touchstart', () => {
     startMovement('up');
   });
-  arrowUp.addEventListener('mouseup', () => {
+  arrowUp.addEventListener('touchend', () => {
     stopMovement();
   });
 
-  arrowDown.addEventListener('mousedown', () => {
+  arrowDown.addEventListener('touchstart', () => {
     startMovement('down');
   });
-  arrowDown.addEventListener('mouseup', () => {
+  arrowDown.addEventListener('touchend', () => {
     stopMovement();
   });
 
-  arrowLeft.addEventListener('mousedown', () => {
+  arrowLeft.addEventListener('touchstart', () => {
     startMovement('left');
   });
-  arrowLeft.addEventListener('mouseup', () => {
+  arrowLeft.addEventListener('touchend', () => {
     stopMovement();
   });
 
-  arrowRight.addEventListener('mousedown', () => {
+  arrowRight.addEventListener('touchstart', () => {
     startMovement('right');
   });
-  arrowRight.addEventListener('mouseup', () => {
+  arrowRight.addEventListener('touchend', () => {
     stopMovement();
   });
 
