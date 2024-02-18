@@ -7,14 +7,17 @@
   <style>
     body { margin: 0; padding: 0; overflow: hidden; }
     canvas { display: block; }
-    .joystick-container {
+    .arrow-container {
       position: absolute;
       bottom: 20px;
       left: 20px;
+      display: flex;
+      justify-content: space-between;
+      width: 200px; /* Adjusted width to accommodate larger buttons */
     }
-    .joystick {
-      width: 80px;
-      height: 80px;
+    .arrow {
+      width: 60px; /* Increased button size */
+      height: 60px; /* Increased button size */
       background-color: rgba(255, 255, 255, 0.5);
       border-radius: 50%;
       display: flex;
@@ -22,11 +25,29 @@
       align-items: center;
       cursor: pointer;
     }
-    .joystick-thumb {
-      width: 40px;
-      height: 40px;
-      background-color: rgba(0, 0, 0, 0.5);
-      border-radius: 50%;
+    .arrow-up, .arrow-down {
+      width: 0;
+      height: 0;
+      border-left: 15px solid transparent;
+      border-right: 15px solid transparent;
+    }
+    .arrow-up {
+      border-bottom: 15px solid rgba(0, 0, 0, 0.5);
+    }
+    .arrow-down {
+      border-top: 15px solid rgba(0, 0, 0, 0.5);
+    }
+    .arrow-left, .arrow-right {
+      width: 0;
+      height: 0;
+      border-top: 15px solid transparent;
+      border-bottom: 15px solid transparent;
+    }
+    .arrow-left {
+      border-right: 15px solid rgba(0, 0, 0, 0.5);
+    }
+    .arrow-right {
+      border-left: 15px solid rgba(0, 0, 0, 0.5);
     }
     .refresh-button {
       position: absolute;
@@ -34,7 +55,7 @@
       left: 20px;
       background-color: #ffffff;
       border: 1px solid #000000;
-      padding: 5px 10px;
+      padding: 10px 20px; /* Increased padding */
       border-radius: 5px;
       cursor: pointer;
     }
@@ -43,17 +64,17 @@
 </head>
 <body>
 
-    <button class="refresh-button" onclick="refreshPage()">Refresh</button>
+<button class="refresh-button" onclick="refreshPage()">Refresh</button>
 
-
-<div class="joystick-container">
-  <div class="joystick" id="joystick">
-    <div class="joystick-thumb" id="joystick-thumb"></div>
-  </div>
+<div class="arrow-container">
+  <div class="arrow arrow-up" id="arrow-up"></div>
+  <div class="arrow arrow-down" id="arrow-down"></div>
+  <div class="arrow arrow-left" id="arrow-left"></div>
+  <div class="arrow arrow-right" id="arrow-right"></div>
 </div>
 
 <script>
-     function refreshPage() {
+  function refreshPage() {
     window.location.reload();
   }
   // Set up Three.js renderer
@@ -98,13 +119,13 @@
   const finishWall = new THREE.Mesh(finishWallGeometry, finishWallMaterial);
   finishWall.position.set(0, 1, 5); // Adjust position as needed
   scene.add(finishWall);
-// Create roof
-const roofGeometry = new THREE.PlaneGeometry(mazeSize + 2, mazeSize + 2);
-const roofMaterial = new THREE.MeshBasicMaterial({ color: 0x808080, side: THREE.DoubleSide }); // Gray color
-const roof = new THREE.Mesh(roofGeometry, roofMaterial);
-roof.rotation.x = Math.PI / 2; // Rotate the roof to be horizontal
-roof.position.set(0, 3, 0); // Position the roof above the maze geometry
-scene.add(roof);
+  // Create roof
+  const roofGeometry = new THREE.PlaneGeometry(mazeSize + 2, mazeSize + 2);
+  const roofMaterial = new THREE.MeshBasicMaterial({ color: 0x808080, side: THREE.DoubleSide }); // Gray color
+  const roof = new THREE.Mesh(roofGeometry, roofMaterial);
+  roof.rotation.x = Math.PI / 2; // Rotate the roof to be horizontal
+  roof.position.set(0, 3, 0); // Position the roof above the maze geometry
+  scene.add(roof);
 
   // Set up player
   const playerGeometry = new THREE.BoxGeometry(0.5, 0.5, 0.5);
@@ -114,63 +135,81 @@ scene.add(roof);
   scene.add(player);
 
   // Handle user input for player movement
-  const joystick = document.getElementById('joystick');
-  const thumb = document.getElementById('joystick-thumb');
-  const joystickSize = 40;
-  const joystickPosition = { x: 0, y: 0 };
+  const arrowUp = document.getElementById('arrow-up');
+  const arrowDown = document.getElementById('arrow-down');
+  const arrowLeft = document.getElementById('arrow-left');
+  const arrowRight = document.getElementById('arrow-right');
 
-  function checkCollisionWithWalls(position) {
-    for (const wall of walls) {
-      const distance = wall.position.distanceTo(position);
-      if (distance < 1) {
-        return true; // Collision detected
+  const movementSpeed = 0.02;
+  let moveInterval = null;
+
+  function startMovement(direction) {
+    moveInterval = setInterval(() => {
+      let newPosition = player.position.clone();
+      switch (direction) {
+        case 'up':
+          newPosition.z -= movementSpeed;
+          break;
+        case 'down':
+          newPosition.z += movementSpeed;
+          break;
+        case 'left':
+          newPosition.x -= movementSpeed;
+          break;
+        case 'right':
+          newPosition.x += movementSpeed;
+          break;
       }
-    }
-    return false; // No collision
+
+      // Check collision with walls
+      let collision = false;
+      walls.forEach(wall => {
+        if (newPosition.distanceTo(wall.position) < 1) { // Adjust 1 to the appropriate distance based on your wall size
+          collision = true;
+        }
+      });
+
+      if (!collision) {
+        player.position.copy(newPosition);
+      }
+    }, 10);
   }
 
-  function checkCollisionWithFinishWall() {
-    const distance = finishWall.position.distanceTo(player.position);
-    return distance < 1.5; // Adjust as needed for collision detection
+  function stopMovement() {
+    clearInterval(moveInterval);
   }
 
-  function updateJoystick(event) {
-    const rect = joystick.getBoundingClientRect();
-    joystickPosition.x = event.clientX - rect.left - joystickSize / 2;
-    joystickPosition.y = event.clientY - rect.top - joystickSize / 2;
-    const distance = Math.sqrt(joystickPosition.x ** 2 + joystickPosition.y ** 2);
-    if (distance > joystickSize / 2) {
-      const angle = Math.atan2(joystickPosition.y, joystickPosition.x);
-      joystickPosition.x = Math.cos(angle) * (joystickSize / 2);
-      joystickPosition.y = Math.sin(angle) * (joystickSize / 2);
-    }
-    thumb.style.transform = `translate(${joystickPosition.x}px, ${joystickPosition.y}px)`;
-  }
-
-  joystick.addEventListener('mousedown', () => {
-    thumb.style.width = `${joystickSize}px`;
-    thumb.style.height = `${joystickSize}px`;
-    window.addEventListener('mousemove', updateJoystick);
+  arrowUp.addEventListener('mousedown', () => {
+    startMovement('up');
+  });
+  arrowUp.addEventListener('mouseup', () => {
+    stopMovement();
   });
 
-  window.addEventListener('mouseup', () => {
-    thumb.style.width = '40px';
-    thumb.style.height = '40px';
-    thumb.style.transform = 'translate(0px, 0px)';
-    window.removeEventListener('mousemove', updateJoystick);
-    joystickPosition.x = 0;
-    joystickPosition.y = 0;
+  arrowDown.addEventListener('mousedown', () => {
+    startMovement('down');
+  });
+  arrowDown.addEventListener('mouseup', () => {
+    stopMovement();
+  });
+
+  arrowLeft.addEventListener('mousedown', () => {
+    startMovement('left');
+  });
+  arrowLeft.addEventListener('mouseup', () => {
+    stopMovement();
+  });
+
+  arrowRight.addEventListener('mousedown', () => {
+    startMovement('right');
+  });
+  arrowRight.addEventListener('mouseup', () => {
+    stopMovement();
   });
 
   // Render loop
   function animate() {
     requestAnimationFrame(animate);
-    const newPosition = player.position.clone(); // Get the current position of the player
-    newPosition.x += joystickPosition.x * 0.002; // Slow down movement along the x-axis
-    newPosition.z += joystickPosition.y * 0.002; // Slow down movement along the z-axis
-    if (!checkCollisionWithWalls(newPosition)) {
-      player.position.copy(newPosition); // Move the player if there is no collision
-    }
     camera.position.x = player.position.x; // Follow player with camera
     camera.position.z = player.position.z + 1.5; // Adjusted camera position (closer to the player)
     camera.lookAt(player.position); // Camera looks at player
