@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3D Maze Game</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+    }
+
+    canvas {
+      display: block;
+    }
+
+    .arrow-container {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      justify-content: space-between;
+      width: 60vw; /* Adjusted width to fit better on mobile */
+    }
+
+    .arrow {
+      width: 15vw; /* Increased button size for touch input */
+      height: 15vw; /* Increased button size for touch input */
+      background-color: rgba(255, 255, 255, 0.5);
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+    }
+
+    .arrow-up,
+    .arrow-down {
+      width: 0;
+      height: 0;
+      border-left: 5vw solid transparent; /* Adjusted border size */
+      border-right: 5vw solid transparent; /* Adjusted border size */
+    }
+
+    .arrow-up {
+      border-bottom: 5vw solid rgba(0, 0, 0, 0.5);
+    }
+
+    .arrow-down {
+      border-top: 5vw solid rgba(0, 0, 0, 0.5);
+    }
+
+    .arrow-left,
+    .arrow-right {
+      width: 0;
+      height: 0;
+      border-top: 5vw solid transparent; /* Adjusted border size */
+      border-bottom: 5vw solid transparent; /* Adjusted border size */
+    }
+
+    .arrow-left {
+      border-right: 5vw solid rgba(0, 0, 0, 0.5);
+    }
+
+    .arrow-right {
+      border-left: 5vw solid rgba(0, 0, 0, 0.5);
+    }
+
+    .refresh-button {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      background-color: #ffffff;
+      border: 1px solid #000000;
+      padding: 10px 20px; /* Increased padding */
+      border-radius: 5px;
+      cursor: pointer;
+    }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body style="background-color: #222222;">
+
+<button class="refresh-button" onclick="refreshPage()">Refresh</button>
+
+<div class="arrow-container">
+  <div class="arrow arrow-up" id="arrow-up"></div>
+  <div class="arrow arrow-down" id="arrow-down"></div>
+  <div class="arrow arrow-left" id="arrow-left"></div>
+  <div class="arrow arrow-right" id="arrow-right"></div>
+</div>
+
+<script>
+  function refreshPage() {
+    window.location.reload();
+  }
+
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  document.body.appendChild(renderer.domElement);
+
+  const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+  camera.position.set(0, 3, 2);
+
+  const scene = new THREE.Scene();
+
+  // Change the color of the maze to dark gray
+  const mazeSize = 10;
+  const mazeGeometry = new THREE.BoxGeometry(mazeSize, 2, mazeSize);
+  const mazeMaterial = new THREE.MeshBasicMaterial({ color: 0x333333 });
+  const maze = new THREE.Mesh(mazeGeometry, mazeMaterial);
+  scene.add(maze);
+
+  // Change the color of the walls to light gray
+  const wallCount = 20;
+  const wallGeometry = new THREE.BoxGeometry(2, 30, 0.125);
+  const wallMaterial = new THREE.MeshBasicMaterial({ color: 0xaaaaaa });
+  const walls = [];
+  for (let i = 0; i < wallCount; i++) {
+    let x, z;
+    do {
+      x = Math.floor(Math.random() * mazeSize) - mazeSize / 2;
+      z = Math.floor(Math.random() * mazeSize) - mazeSize / 2;
+    } while ((x >= -0.5 && x <= 0.5) && (z >= 4.5 && z <= 5.5));
+    const wall = new THREE.Mesh(wallGeometry, wallMaterial);
+    wall.position.set(x, 1, z);
+    scene.add(wall);
+    walls.push(wall);
+  }
+
+  // Change the color of the finish wall to blue
+  const finishWallGeometry = new THREE.BoxGeometry(1, 2, 1);
+  const finishWallMaterial = new THREE.MeshBasicMaterial({ color: 0x0000ff });
+  const finishWall = new THREE.Mesh(finishWallGeometry, finishWallMaterial);
+  finishWall.position.set(0, 1, 5);
+  scene.add(finishWall);
+
+  // Change the color of the floor to dark gray
+  const floorGeometry = new THREE.PlaneGeometry(mazeSize + 2, mazeSize + 2);
+  const floorMaterial = new THREE.MeshBasicMaterial({ color: 0x333333, side: THREE.DoubleSide });
+  const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+  floor.rotation.x = Math.PI / 2;
+  floor.position.set(0, 0, 0);
+  scene.add(floor);
+
+  const playerGeometry = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+  const playerMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+  const player = new THREE.Mesh(playerGeometry, playerMaterial);
+  player.position.set(0, 1, 0);
+  scene.add(player);
+
+  const arrowUp = document.getElementById('arrow-up');
+  const arrowDown = document.getElementById('arrow-down');
+  const arrowLeft = document.getElementById('arrow-left');
+  const arrowRight = document.getElementById('arrow-right');
+
+  const movementSpeed = 0.02;
+  let moveInterval = null;
+
+  function startMovement(direction) {
+    moveInterval = setInterval(() => {
+      let newPosition = player.position.clone();
+      switch (direction) {
+        case 'up':
+          newPosition.z -= movementSpeed;
+          break;
+        case 'down':
+          newPosition.z += movementSpeed;
+          break;
+        case 'left':
+          newPosition.x -= movementSpeed;
+          break;
+        case 'right':
+          newPosition.x += movementSpeed;
+          break;
+      }
+
+      let collision = false;
+      walls.forEach(wall => {
+        if (newPosition.distanceTo(wall.position) < 1) {
+          collision = true;
+        }
+      });
+
+      if (!collision) {
+        player.position.copy(newPosition);
+      }
+    }, 10);
+  }
+
+  function stopMovement() {
+    clearInterval(moveInterval);
+  }
+
+  arrowUp.addEventListener('touchstart', () => {
+    startMovement('up');
+  });
+  arrowUp.addEventListener('touchend', () => {
+    stopMovement();
+  });
+
+  arrowDown.addEventListener('touchstart', () => {
+    startMovement('down');
+  });
+  arrowDown.addEventListener('touchend', () => {
+    stopMovement();
+  });
+
+  arrowLeft.addEventListener('touchstart', () => {
+    startMovement('left');
+  });
+  arrowLeft.addEventListener('touchend', () => {
+    stopMovement();
+  });
+
+  arrowRight.addEventListener('touchstart', () => {
+    startMovement('right');
+  });
+  arrowRight.addEventListener('touchend', () => {
+    stopMovement();
+  });
+
+  function animate() {
+    requestAnimationFrame(animate);
+    camera.position.x = player.position.x;
+    camera.position.z = player.position.z + 1.5;
+    camera.lookAt(player.position);
+    renderer.render(scene, camera);
+
+    if (checkCollisionWithFinishWall()) {
+      alert('Congratulations! You finished!');
+    }
+  }
+
+  animate();
+</script>
+
+</body>
+</html>
